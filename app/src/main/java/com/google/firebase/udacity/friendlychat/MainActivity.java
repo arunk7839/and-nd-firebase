@@ -16,6 +16,7 @@
 package com.google.firebase.udacity.friendlychat;
 
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.text.Editable;
 import android.text.InputFilter;
@@ -29,7 +30,11 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.ProgressBar;
+import android.widget.Toast;
 
+import com.firebase.ui.auth.AuthUI;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -38,6 +43,7 @@ import com.google.firebase.database.FirebaseDatabase;
 
 import java.util.ArrayList;
 import java.util.List;
+
 
 public class MainActivity extends AppCompatActivity {
 
@@ -57,6 +63,11 @@ public class MainActivity extends AppCompatActivity {
     FirebaseDatabase mFirebaseDatabase;
     DatabaseReference mDatabaseReference;
     ChildEventListener mChildEventListener;
+    FirebaseAuth mFirebaseAuth;
+    FirebaseAuth.AuthStateListener mAuthStateListener;
+
+    public static final int RC_SIGN_IN=1;
+
 
 
     @Override
@@ -68,7 +79,7 @@ public class MainActivity extends AppCompatActivity {
         // Write a message to the database
         mFirebaseDatabase = FirebaseDatabase.getInstance();
         mDatabaseReference = mFirebaseDatabase.getReference().child("message");
-
+        mFirebaseAuth=FirebaseAuth.getInstance();
 
         mUsername = ANONYMOUS;
 
@@ -163,6 +174,44 @@ public class MainActivity extends AppCompatActivity {
 
         mDatabaseReference.addChildEventListener(mChildEventListener);
 
+        mAuthStateListener=new FirebaseAuth.AuthStateListener() {
+            @Override
+            public void onAuthStateChanged(@NonNull FirebaseAuth firebaseAuth) {
+                FirebaseUser user=firebaseAuth.getCurrentUser();
+                if(user!=null)
+                {
+                    //user is alive
+
+                    Toast.makeText(MainActivity.this,"Welcome back",Toast.LENGTH_LONG).show();
+                }else{
+                    // allow user to signIn
+
+                    startActivityForResult(
+                            AuthUI.getInstance()
+                                    .createSignInIntentBuilder()
+                                    .setIsSmartLockEnabled(false)
+                                    .setProviders(AuthUI.EMAIL_PROVIDER,AuthUI.GOOGLE_PROVIDER)
+                                    .build(),
+                            RC_SIGN_IN);
+
+                }
+            }
+        };
+
+    }
+
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mFirebaseAuth.addAuthStateListener(mAuthStateListener);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+
+        mFirebaseAuth.removeAuthStateListener(mAuthStateListener);
     }
 
     @Override
